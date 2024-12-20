@@ -20,8 +20,27 @@ contract Board {
         kBlackKing
     }
 
+    enum Color {
+        kWhite,
+        kBlack
+    }
+
+    struct Cell {
+        uint8 row;
+        uint8 col;
+    }
+
     // (row, column)
     Figure[8][8] public board;
+    Color whose_move;
+    bool white_kingside_castling_is_possible = true;
+    bool white_queenside_castling_is_possible = true;
+    bool black_kingside_castling_is_possible = true;
+    bool black_queenside_castling_is_possible = true;
+
+    Cell maybe_en_passant_cell; // (0, 0) if en-passant is impossible. A square over which a pawn has just passed while moving two squares otherwise
+    uint32 halfmove_clock; // the number of halfmoves since the last capture or pawn advance, used for the fifty-move rule
+    uint32 fullmove_number; // the number of the full moves
 
     constructor() {
         for (uint8 c = 0; c <= 7; ++c) {
@@ -46,9 +65,46 @@ contract Board {
         board[7][5] = Figure.kBlackBishop;
         board[7][6] = Figure.kBlackKnight;
         board[7][7] = Figure.kBlackRook;
+
+        whose_move = Color.kWhite;
+
+        maybe_en_passant_cell.row = 0;
+        maybe_en_passant_cell.col = 0;
+
+        halfmove_clock = 0;
+        fullmove_number = 1;
     }
 
-    function CellToFENCharacter(
+    function IntToColumnCharacter(
+        uint8 col
+    ) external pure returns (string memory) {
+        if (col == 0) return "a";
+        if (col == 1) return "b";
+        if (col == 2) return "c";
+        if (col == 3) return "d";
+        if (col == 4) return "e";
+        if (col == 5) return "f";
+        if (col == 6) return "g";
+        if (col == 7) return "h";
+
+        revert("Unexpected column");
+    }
+
+    function CellToString(
+        Cell memory cell
+    ) external view returns (string memory) {
+        require(0 <= cell.row && cell.row <= 7, "unexepcted row");
+        require(0 <= cell.col && cell.col <= 7, "unexpected col");
+
+        string memory result = string.concat(
+            this.IntToColumnCharacter(cell.col),
+            Strings.toString(cell.row)
+        );
+
+        return result;
+    }
+
+    function FigureToFENCharacter(
         Figure figure
     ) external pure returns (string memory) {
         if (figure == Figure.kBlackPawn) return "p";
@@ -68,6 +124,7 @@ contract Board {
         revert("Unexpected figure");
     }
 
+    // https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
     function GetFEN() external view returns (string memory) {
         string memory result = "";
         for (int8 row = 7; row >= 0; --row) {
@@ -86,7 +143,7 @@ contract Board {
                     }
                     result = string.concat(
                         result,
-                        this.CellToFENCharacter(figure)
+                        this.FigureToFENCharacter(figure)
                     );
                 }
             }
@@ -97,6 +154,46 @@ contract Board {
                 result = string.concat(result, "/");
             }
         }
+
+        if (whose_move == Color.kWhite) {
+            result = string.concat(result, " w ");
+        } else {
+            result = string.concat(result, " b ");
+        }
+
+        bool at_least_one_characted_was_appended = false;
+        if (white_kingside_castling_is_possible) {
+            result = string.concat(result, "K");
+            at_least_one_characted_was_appended = true;
+        }
+        if (white_queenside_castling_is_possible) {
+            result = string.concat(result, "Q");
+            at_least_one_characted_was_appended = true;
+        }
+        if (black_kingside_castling_is_possible) {
+            result = string.concat(result, "k");
+            at_least_one_characted_was_appended = true;
+        }
+        if (black_queenside_castling_is_possible) {
+            result = string.concat(result, "q");
+            at_least_one_characted_was_appended = true;
+        }
+        if (at_least_one_characted_was_appended) {
+            result = string.concat(result, " ");
+        }
+
+        if (maybe_en_passant_cell.col != 0) {
+            result = string.concat(
+                result,
+                " ",
+                this.CellToString(maybe_en_passant_cell),
+                " "
+            );
+        } else {
+            result = string.concat(result, "- ");
+        }
+        result = string.concat(result, Strings.toString(halfmove_clock), " ");
+        result = string.concat(result, Strings.toString(fullmove_number));
         return result;
     }
 }
