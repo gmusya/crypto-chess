@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract Board {
     enum Figure {
+        kEmpty,
         kWhitePawn,
         kWhiteKnight,
         kWhiteBishop,
@@ -16,8 +17,7 @@ contract Board {
         kBlackBishop,
         kBlackRook,
         kBlackQueen,
-        kBlackKing,
-        kEmpty
+        kBlackKing
     }
 
     // (row, column)
@@ -78,14 +78,20 @@ contract Board {
                     empty_cells += 1;
                 } else {
                     if (empty_cells >= 1) {
-                        result = string.concat(Strings.toString(empty_cells));
+                        result = string.concat(
+                            result,
+                            Strings.toString(empty_cells)
+                        );
                         empty_cells = 0;
                     }
-                    result = string.concat(this.CellToFENCharacter(figure));
+                    result = string.concat(
+                        result,
+                        this.CellToFENCharacter(figure)
+                    );
                 }
             }
             if (empty_cells >= 1) {
-                result = string.concat(Strings.toString(empty_cells));
+                result = string.concat(result, Strings.toString(empty_cells));
             }
             if (row != 0) {
                 result = string.concat(result, "/");

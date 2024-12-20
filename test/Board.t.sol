@@ -12,6 +12,7 @@ contract BoardTest is Test {
     }
 
     function test_FEN() public view {
+        console.log(board.GetFEN());
         assertEq(board.GetFEN(), "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
     }
 }
