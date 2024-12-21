@@ -77,4 +77,28 @@ contract BoardTest is Test {
             "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4"
         );
     }
+
+    function test_KingMove() public {
+        Board board = new Board();
+        board.MakeMove(Board.Cell(1, 4), Board.Cell(3, 4));
+        board.MakeMove(Board.Cell(6, 4), Board.Cell(4, 4));
+
+        board.MakeMove(Board.Cell(0, 4), Board.Cell(1, 4));
+        assertEq(
+            board.GetFEN(),
+            "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPPKPPP/RNBQ1BNR b kq - 1 2"
+        );
+    }
+
+    function test_RookMove() public {
+        Board board = new Board();
+        board.MakeMove(Board.Cell(1, 7), Board.Cell(2, 7));
+        board.MakeMove(Board.Cell(6, 4), Board.Cell(4, 4));
+
+        board.MakeMove(Board.Cell(0, 7), Board.Cell(1, 7));
+        assertEq(
+            board.GetFEN(),
+            "rnbqkbnr/pppp1ppp/8/4p3/8/7P/PPPPPPPR/RNBQKBN1 b Qkq - 1 2"
+        );
+    }
 }

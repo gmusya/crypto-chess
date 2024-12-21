@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract Board {
@@ -78,11 +76,8 @@ contract Board {
         fullmove_number = 1;
     }
 
-    function CheckCellValidity(Cell memory cell) internal pure {
-        require(
-            0 <= cell.col && cell.col <= 7 && 0 <= cell.row && cell.row <= 7,
-            "Invalid cell"
-        );
+    function CheckCellValidity(Cell memory cell) internal pure returns (bool) {
+        return 0 <= cell.col && cell.col <= 7 && 0 <= cell.row && cell.row <= 7;
     }
 
     function CellToColor(Cell memory cell) internal view returns (Color) {
@@ -296,128 +291,192 @@ contract Board {
         return (diff1 == 1 && diff2 == 2) || (diff1 == 2 && diff2 == 1);
     }
 
-    function MakeWhitePawnMove(Cell memory from, Cell memory to) internal view {
-        require(IsMovePossibleOnEmptyBoardWhitePawn(from, to));
+    function MakeWhitePawnMove(
+        Cell memory from,
+        Cell memory to
+    ) internal view returns (bool) {
+        if (!IsMovePossibleOnEmptyBoardWhitePawn(from, to)) {
+            return false;
+        }
 
         if (from.col == to.col) {
             for (uint8 r = from.row + 1; r <= to.row; ++r) {
-                require(
-                    CellToColor(Cell(r, from.col)) == Color.kNothing,
-                    "Non-empty cell on pawn move"
-                );
+                Cell memory inter_cell = Cell(uint8(r), uint8(from.col));
+                if (CellToColor(inter_cell) != Color.kNothing) {
+                    return false;
+                }
             }
         } else {
             Color to_color = CellToColor(to);
-            require(to_color != Color.kNothing && to_color != whose_move);
+            if (to_color == Color.kNothing || to_color == whose_move) {
+                return false;
+            }
         }
+
+        return true;
     }
 
-    function MakeBlackPawnMove(Cell memory from, Cell memory to) internal view {
-        require(IsMovePossibleOnEmptyBoardBlackPawn(from, to));
+    function MakeBlackPawnMove(
+        Cell memory from,
+        Cell memory to
+    ) internal view returns (bool) {
+        if (!IsMovePossibleOnEmptyBoardBlackPawn(from, to)) {
+            return false;
+        }
 
         if (from.col == to.col) {
             for (int8 r = int8(from.row) - 1; r >= int8(to.row); --r) {
-                require(
-                    CellToColor(Cell(uint8(r), from.col)) == Color.kNothing,
-                    "Non-empty cell on pawn move"
-                );
+                Cell memory inter_cell = Cell(uint8(r), uint8(from.col));
+                if (CellToColor(inter_cell) != Color.kNothing) {
+                    return false;
+                }
             }
         } else {
             Color to_color = CellToColor(to);
-            require(to_color != Color.kNothing && to_color != whose_move);
+            if (to_color == Color.kNothing || to_color == whose_move) {
+                return false;
+            }
         }
+        return true;
     }
 
-    function MakeKnightMove(Cell memory from, Cell memory to) internal view {
-        require(IsMovePossibleOnEmptyBoardKnight(from, to));
+    function MakeKnightMove(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        return IsMovePossibleOnEmptyBoardKnight(from, to);
     }
 
-    function MakeBishopMove(Cell memory from, Cell memory to) internal view {
-        require(IsMovePossibleOnEmptyBoardBishop(from, to));
+    function MakeBishopMove(
+        Cell memory from,
+        Cell memory to
+    ) internal view returns (bool) {
+        if (!IsMovePossibleOnEmptyBoardBishop(from, to)) {
+            return false;
+        }
 
         int8 dcol = (from.col <= to.col) ? int8(1) : int8(-1);
         int8 drow = (from.row <= to.row) ? int8(1) : int8(-1);
 
         for (int8 s = 1; int8(from.col) + s * dcol != int8(to.col); ++s) {
-            Cell memory inter_cell = Cell(uint8(int8(from.row) + s * drow), uint8(int8(from.col) + s * dcol));
+            Cell memory inter_cell = Cell(
+                uint8(int8(from.row) + s * drow),
+                uint8(int8(from.col) + s * dcol)
+            );
             if (CellToColor(inter_cell) != Color.kNothing) {
-                revert("Cannot pass through other piece");
+                return false;
             }
         }
+        return true;
     }
 
-    function MakeRookMove(Cell memory from, Cell memory to) internal view {
-        require(IsMovePossibleOnEmptyBoardRook(from, to));
+    function MakeRookMove(
+        Cell memory from,
+        Cell memory to
+    ) internal view returns (bool) {
+        if (!IsMovePossibleOnEmptyBoardRook(from, to)) {
+            return false;
+        }
 
-        revert("Not implemented");
-    }
-
-    function MakeQueenMove(Cell memory from, Cell memory to) internal view {
-        require(IsMovePossibleOnEmptyBoardQueen(from, to));
-
-        int8 dcol = (from.col <= to.col) ? (from.col == to.col ? int8(0) : int8(1)) : int8(-1);
-        int8 drow = (from.row <= to.row) ? (from.row == to.row ? int8(0) : int8(1)) : int8(-1);
+        int8 dcol = (from.col <= to.col)
+            ? (from.col == to.col ? int8(0) : int8(1))
+            : int8(-1);
+        int8 drow = (from.row <= to.row)
+            ? (from.row == to.row ? int8(0) : int8(1))
+            : int8(-1);
 
         for (int8 s = 1; int8(from.col) + s * dcol != int8(to.col); ++s) {
-            Cell memory inter_cell = Cell(uint8(int8(from.row) + s * drow), uint8(int8(from.col) + s * dcol));
+            Cell memory inter_cell = Cell(
+                uint8(int8(from.row) + s * drow),
+                uint8(int8(from.col) + s * dcol)
+            );
             if (CellToColor(inter_cell) != Color.kNothing) {
-                revert("Cannot pass through other piece");
+                return false;
             }
         }
+        return true;
     }
 
-    function MakeKingMove(Cell memory from, Cell memory to) internal view {
-        require(IsMovePossibleOnEmptyBoardKing(from, to));
+    function MakeQueenMove(
+        Cell memory from,
+        Cell memory to
+    ) internal view returns (bool) {
+        if (!IsMovePossibleOnEmptyBoardQueen(from, to)) {
+            return false;
+        }
 
-        revert("Not implemented");
+        int8 dcol = (from.col <= to.col)
+            ? (from.col == to.col ? int8(0) : int8(1))
+            : int8(-1);
+        int8 drow = (from.row <= to.row)
+            ? (from.row == to.row ? int8(0) : int8(1))
+            : int8(-1);
+
+        for (int8 s = 1; int8(from.col) + s * dcol != int8(to.col); ++s) {
+            Cell memory inter_cell = Cell(
+                uint8(int8(from.row) + s * drow),
+                uint8(int8(from.col) + s * dcol)
+            );
+            if (CellToColor(inter_cell) != Color.kNothing) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function MakeKingMove(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        return IsMovePossibleOnEmptyBoardKing(from, to);
     }
 
     function CheckIfMovePossible(
         Cell memory from,
         Cell memory to
-    ) internal view {
-        CheckCellValidity(from);
-        CheckCellValidity(to);
+    ) internal view returns (bool) {
+        if (!CheckCellValidity(from)) {
+            return false;
+        }
+        if (!CheckCellValidity(to)) {
+            return false;
+        }
 
-        require(CellToColor(from) == whose_move);
-        require(CellToColor(to) != whose_move);
+        if (!(CellToColor(from) == whose_move)) {
+            return false;
+        }
+        if ((CellToColor(to) == whose_move)) {
+            return false;
+        }
 
         Figure figure = board[from.row][from.col];
         if (figure == Figure.kWhitePawn) {
-            console.log("White pawn move");
-            MakeWhitePawnMove(from, to);
-            return;
+            return MakeWhitePawnMove(from, to);
         }
         if (figure == Figure.kBlackPawn) {
-            MakeBlackPawnMove(from, to);
-            return;
+            return MakeBlackPawnMove(from, to);
         }
         if (figure == Figure.kWhiteKnight || figure == Figure.kBlackKnight) {
-            MakeKnightMove(from, to);
-            return;
+            return MakeKnightMove(from, to);
         }
         if (figure == Figure.kWhiteBishop || figure == Figure.kBlackBishop) {
-            MakeBishopMove(from, to);
-            return;
+            return MakeBishopMove(from, to);
         }
         if (figure == Figure.kWhiteRook || figure == Figure.kBlackRook) {
-            MakeRookMove(from, to);
-            return;
+            return MakeRookMove(from, to);
         }
         if (figure == Figure.kWhiteQueen || figure == Figure.kBlackQueen) {
-            MakeQueenMove(from, to);
-            return;
+            return MakeQueenMove(from, to);
         }
         if (figure == Figure.kWhiteKing || figure == Figure.kBlackKing) {
-            MakeKingMove(from, to);
-            return;
+            return MakeKingMove(from, to);
         }
 
-        require(false, "Unexpected figure");
+        return false;
     }
 
     function MakeMove(Cell memory from, Cell memory to) external {
-        CheckIfMovePossible(from, to);
+        require(CheckIfMovePossible(from, to), "Illegal move");
 
         Figure figure = board[from.row][from.col];
 
@@ -453,5 +512,26 @@ contract Board {
             maybe_en_passant_cell.col = 0;
             maybe_en_passant_cell.row = 0;
         }
-    }
+
+        if (
+            board[0][7] != Figure.kWhiteRook || board[0][4] != Figure.kWhiteKing
+        ) {
+            white_kingside_castling_is_possible = false;
+        }
+        if (
+            board[0][0] != Figure.kWhiteRook || board[0][4] != Figure.kWhiteKing
+        ) {
+            white_queenside_castling_is_possible = false;
+        }
+        if (
+            board[7][7] != Figure.kBlackRook || board[7][4] != Figure.kBlackKing
+        ) {
+            black_kingside_castling_is_possible = false;
+        }
+        if (
+            board[7][0] != Figure.kBlackRook || board[7][4] != Figure.kBlackKing
+        ) {
+            black_queenside_castling_is_possible = false;
+        }
+    } 
 }
