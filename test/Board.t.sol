@@ -62,5 +62,19 @@ contract BoardTest is Test {
             board.GetFEN(),
             "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3"
         );
+
+        board.MakeMove(Board.Cell(7, 6), Board.Cell(5, 5));
+
+        assertEq(
+            board.GetFEN(),
+            "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4"
+        );
+
+        board.MakeMove(Board.Cell(4, 7), Board.Cell(6, 5));
+
+        assertEq(
+            board.GetFEN(),
+            "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4"
+        );
     }
 }
