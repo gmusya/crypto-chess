@@ -339,12 +339,10 @@ contract Board {
         int8 drow = (from.row <= to.row) ? int8(1) : int8(-1);
 
         for (int8 s = 1; int8(from.col) + s * dcol != int8(to.col); ++s) {
-            console.log('A');
             Cell memory inter_cell = Cell(uint8(int8(from.row) + s * drow), uint8(int8(from.col) + s * dcol));
             if (CellToColor(inter_cell) != Color.kNothing) {
                 revert("Cannot pass through other piece");
             }
-            console.log('B');
         }
     }
 
@@ -357,7 +355,15 @@ contract Board {
     function MakeQueenMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardQueen(from, to));
 
-        revert("Not implemented");
+        int8 dcol = (from.col <= to.col) ? (from.col == to.col ? int8(0) : int8(1)) : int8(-1);
+        int8 drow = (from.row <= to.row) ? (from.row == to.row ? int8(0) : int8(1)) : int8(-1);
+
+        for (int8 s = 1; int8(from.col) + s * dcol != int8(to.col); ++s) {
+            Cell memory inter_cell = Cell(uint8(int8(from.row) + s * drow), uint8(int8(from.col) + s * dcol));
+            if (CellToColor(inter_cell) != Color.kNothing) {
+                revert("Cannot pass through other piece");
+            }
+        }
     }
 
     function MakeKingMove(Cell memory from, Cell memory to) internal view {
