@@ -330,8 +330,6 @@ contract Board {
 
     function MakeKnightMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardKnight(from, to));
-
-        revert("Not implemented");
     }
 
     function MakeBishopMove(Cell memory from, Cell memory to) internal view {

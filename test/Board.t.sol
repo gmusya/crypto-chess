@@ -48,5 +48,12 @@ contract BoardTest is Test {
             board.GetFEN(),
             "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 2"
         );
+
+        board.MakeMove(Board.Cell(7, 1), Board.Cell(5, 2));
+
+        assertEq(
+            board.GetFEN(),
+            "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 2 3"
+        );
     }
 }
