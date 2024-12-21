@@ -25,4 +25,28 @@ contract BoardTest is Test {
             "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
         );
     }
+
+    function test_ScholarsMate() public {
+        Board board = new Board();
+        board.MakeMove(Board.Cell(1, 4), Board.Cell(3, 4));
+
+        assertEq(
+            board.GetFEN(),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        );
+
+        board.MakeMove(Board.Cell(6, 4), Board.Cell(4, 4));
+
+        assertEq(
+            board.GetFEN(),
+            "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"
+        );
+
+        board.MakeMove(Board.Cell(0, 5), Board.Cell(3, 2));
+
+        assertEq(
+            board.GetFEN(),
+            "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 2"
+        );
+    }
 }

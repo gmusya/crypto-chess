@@ -258,8 +258,8 @@ contract Board {
         Cell memory to
     ) internal pure returns (bool) {
         return
-            abs(int8(from.row) - int8(from.col)) ==
-            abs(int8(to.row) - int8(to.col));
+            abs(int8(from.row) - int8(to.row)) ==
+            abs(int8(from.col) - int8(to.col));
     }
 
     function IsMovePossibleOnEmptyBoardRook(
@@ -299,8 +299,6 @@ contract Board {
     function MakeWhitePawnMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardWhitePawn(from, to));
 
-        console.log("Here");
-
         if (from.col == to.col) {
             for (uint8 r = from.row + 1; r <= to.row; ++r) {
                 require(
@@ -317,7 +315,17 @@ contract Board {
     function MakeBlackPawnMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardBlackPawn(from, to));
 
-        revert("Not implemented");
+        if (from.col == to.col) {
+            for (int8 r = int8(from.row) - 1; r >= int8(to.row); --r) {
+                require(
+                    CellToColor(Cell(uint8(r), from.col)) == Color.kNothing,
+                    "Non-empty cell on pawn move"
+                );
+            }
+        } else {
+            Color to_color = CellToColor(to);
+            require(to_color != Color.kNothing && to_color != whose_move);
+        }
     }
 
     function MakeKnightMove(Cell memory from, Cell memory to) internal view {
@@ -329,7 +337,17 @@ contract Board {
     function MakeBishopMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardBishop(from, to));
 
-        revert("Not implemented");
+        int8 dcol = (from.col <= to.col) ? int8(1) : int8(-1);
+        int8 drow = (from.row <= to.row) ? int8(1) : int8(-1);
+
+        for (int8 s = 1; int8(from.col) + s * dcol != int8(to.col); ++s) {
+            console.log('A');
+            Cell memory inter_cell = Cell(uint8(int8(from.row) + s * drow), uint8(int8(from.col) + s * dcol));
+            if (CellToColor(inter_cell) != Color.kNothing) {
+                revert("Cannot pass through other piece");
+            }
+            console.log('B');
+        }
     }
 
     function MakeRookMove(Cell memory from, Cell memory to) internal view {
