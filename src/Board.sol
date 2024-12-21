@@ -22,7 +22,8 @@ contract Board {
 
     enum Color {
         kWhite,
-        kBlack
+        kBlack,
+        kNothing
     }
 
     struct Cell {
@@ -32,15 +33,15 @@ contract Board {
 
     // (row, column)
     Figure[8][8] public board;
-    Color whose_move;
-    bool white_kingside_castling_is_possible = true;
-    bool white_queenside_castling_is_possible = true;
-    bool black_kingside_castling_is_possible = true;
-    bool black_queenside_castling_is_possible = true;
+    Color public whose_move;
+    bool public white_kingside_castling_is_possible = true;
+    bool public white_queenside_castling_is_possible = true;
+    bool public black_kingside_castling_is_possible = true;
+    bool public black_queenside_castling_is_possible = true;
 
-    Cell maybe_en_passant_cell; // (0, 0) if en-passant is impossible. A square over which a pawn has just passed while moving two squares otherwise
-    uint32 halfmove_clock; // the number of halfmoves since the last capture or pawn advance, used for the fifty-move rule
-    uint32 fullmove_number; // the number of the full moves
+    Cell public maybe_en_passant_cell; // (0, 0) if en-passant is impossible. A square over which a pawn has just passed while moving two squares otherwise
+    uint32 public halfmove_clock; // the number of halfmoves since the last capture or pawn advance, used for the fifty-move rule
+    uint32 public fullmove_number; // the number of the full moves
 
     constructor() {
         for (uint8 c = 0; c <= 7; ++c) {
@@ -75,9 +76,36 @@ contract Board {
         fullmove_number = 1;
     }
 
+    function CheckCellValidity(Cell memory cell) internal pure {
+        require(
+            0 <= cell.col && cell.col <= 7 && 0 <= cell.row && cell.row <= 7,
+            "Invalid cell"
+        );
+    }
+
+    function CellToColor(Cell memory cell) internal view returns (Color) {
+        Figure figure = board[cell.row][cell.col];
+        if (figure == Figure.kEmpty) {
+            return Color.kNothing;
+        }
+
+        if (
+            figure == Figure.kWhitePawn ||
+            figure == Figure.kWhiteKnight ||
+            figure == Figure.kWhiteBishop ||
+            figure == Figure.kWhiteRook ||
+            figure == Figure.kWhiteQueen ||
+            figure == Figure.kWhiteKing
+        ) {
+            return Color.kWhite;
+        }
+
+        return Color.kBlack;
+    }
+
     function IntToColumnCharacter(
         uint8 col
-    ) external pure returns (string memory) {
+    ) internal pure returns (string memory) {
         if (col == 0) return "a";
         if (col == 1) return "b";
         if (col == 2) return "c";
@@ -92,12 +120,11 @@ contract Board {
 
     function CellToString(
         Cell memory cell
-    ) external view returns (string memory) {
-        require(0 <= cell.row && cell.row <= 7, "unexepcted row");
-        require(0 <= cell.col && cell.col <= 7, "unexpected col");
+    ) internal pure returns (string memory) {
+        CheckCellValidity(cell);
 
         string memory result = string.concat(
-            this.IntToColumnCharacter(cell.col),
+            IntToColumnCharacter(cell.col),
             Strings.toString(cell.row)
         );
 
@@ -106,7 +133,7 @@ contract Board {
 
     function FigureToFENCharacter(
         Figure figure
-    ) external pure returns (string memory) {
+    ) internal pure returns (string memory) {
         if (figure == Figure.kBlackPawn) return "p";
         if (figure == Figure.kBlackKnight) return "n";
         if (figure == Figure.kBlackBishop) return "b";
@@ -143,7 +170,7 @@ contract Board {
                     }
                     result = string.concat(
                         result,
-                        this.FigureToFENCharacter(figure)
+                        FigureToFENCharacter(figure)
                     );
                 }
             }
@@ -186,7 +213,7 @@ contract Board {
             result = string.concat(
                 result,
                 " ",
-                this.CellToString(maybe_en_passant_cell),
+                CellToString(maybe_en_passant_cell),
                 " "
             );
         } else {
@@ -195,5 +222,108 @@ contract Board {
         result = string.concat(result, Strings.toString(halfmove_clock), " ");
         result = string.concat(result, Strings.toString(fullmove_number));
         return result;
+    }
+
+    function abs(int8 x) private pure returns (int8) {
+        return x >= 0 ? x : -x;
+    }
+
+    function IsMovePossibleOnEmptyBoardWhitePawn(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        if (from.col != to.col) {
+            return abs(int8(from.col) - int8(to.col)) == 1 && from.row + 1 == to.row;
+        }
+        return from.row + 1 == to.row || (from.row == 2 && to.row == 4);
+    }
+
+    function IsMovePossibleOnEmptyBoardBlackPawn(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        if (from.col != to.col) {
+            return abs(int8(from.col) - int8(to.col)) == 1 && from.row - 1 == to.row;
+        }
+        return from.row - 1 == to.row || (from.row == 7 && to.row == 5);
+    }
+
+    function IsMovePossibleOnEmptyBoardBishop(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        return
+            abs(int8(from.row) - int8(from.col)) ==
+            abs(int8(to.row) - int8(to.col));
+    }
+
+    function IsMovePossibleOnEmptyBoardRook(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        return from.row == to.row || from.col == to.col;
+    }
+
+    function IsMovePossibleOnEmptyBoardKing(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        return
+            abs(int8(from.row) - int8(to.row)) <= 1 &&
+            abs(int8(from.col) - int8(to.col)) <= 1;
+    }
+
+    function IsMovePossibleOnEmptyBoardQueen(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        return
+            IsMovePossibleOnEmptyBoardBishop(from, to) ||
+            IsMovePossibleOnEmptyBoardRook(from, to);
+    }
+
+    function IsMovePossibleOnEmptyBoardKnight(
+        Cell memory from,
+        Cell memory to
+    ) internal pure returns (bool) {
+        int8 diff1 = abs(int8(from.row) - int8(to.row));
+        int8 diff2 = abs(int8(from.col) - int8(to.col));
+        return (diff1 == 1 && diff2 == 2) || (diff1 == 2 && diff2 == 1);
+    }
+
+    function MakeWhitePawnMove(Cell memory from, Cell memory to) internal view {
+        require(IsMovePossibleOnEmptyBoardWhitePawn(from, to));
+    }
+
+    function MakeBlackPawnMove(Cell memory from, Cell memory to) internal view {
+        require(IsMovePossibleOnEmptyBoardBlackPawn(from, to));
+    }
+
+    function MakeKnightMove(Cell memory from, Cell memory to) internal view {
+        require(IsMovePossibleOnEmptyBoardKnight(from, to));
+    }
+
+    function MakeBishopMove(Cell memory from, Cell memory to) internal view {
+        require(IsMovePossibleOnEmptyBoardBishop(from, to));
+    }
+
+    function MakeRookMove(Cell memory from, Cell memory to) internal view {
+        require(IsMovePossibleOnEmptyBoardRook(from, to));
+    }
+
+    function MakeQueenMove(Cell memory from, Cell memory to) internal view {
+        require(IsMovePossibleOnEmptyBoardQueen(from, to));
+    }
+
+    function MakeKingMove(Cell memory from, Cell memory to) internal view {
+        require(IsMovePossibleOnEmptyBoardKing(from, to));
+    }
+
+    function MakeMove(Cell memory from, Cell memory to) external view {
+        CheckCellValidity(from);
+        CheckCellValidity(to);
+
+        require(CellToColor(from) == whose_move);
+        require(CellToColor(to) != whose_move);
     }
 }
