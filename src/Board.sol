@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {Test, console} from "forge-std/Test.sol";
+
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract Board {
@@ -125,7 +127,7 @@ contract Board {
 
         string memory result = string.concat(
             IntToColumnCharacter(cell.col),
-            Strings.toString(cell.row)
+            Strings.toString(cell.row + 1)
         );
 
         return result;
@@ -212,7 +214,6 @@ contract Board {
         if (maybe_en_passant_cell.col != 0) {
             result = string.concat(
                 result,
-                " ",
                 CellToString(maybe_en_passant_cell),
                 " "
             );
@@ -233,9 +234,11 @@ contract Board {
         Cell memory to
     ) internal pure returns (bool) {
         if (from.col != to.col) {
-            return abs(int8(from.col) - int8(to.col)) == 1 && from.row + 1 == to.row;
+            return
+                abs(int8(from.col) - int8(to.col)) == 1 &&
+                from.row + 1 == to.row;
         }
-        return from.row + 1 == to.row || (from.row == 2 && to.row == 4);
+        return from.row + 1 == to.row || (from.row == 1 && to.row == 3);
     }
 
     function IsMovePossibleOnEmptyBoardBlackPawn(
@@ -243,9 +246,11 @@ contract Board {
         Cell memory to
     ) internal pure returns (bool) {
         if (from.col != to.col) {
-            return abs(int8(from.col) - int8(to.col)) == 1 && from.row - 1 == to.row;
+            return
+                abs(int8(from.col) - int8(to.col)) == 1 &&
+                from.row - 1 == to.row;
         }
-        return from.row - 1 == to.row || (from.row == 7 && to.row == 5);
+        return from.row - 1 == to.row || (from.row == 6 && to.row == 4);
     }
 
     function IsMovePossibleOnEmptyBoardBishop(
@@ -293,37 +298,138 @@ contract Board {
 
     function MakeWhitePawnMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardWhitePawn(from, to));
+
+        console.log("Here");
+
+        if (from.col == to.col) {
+            for (uint8 r = from.row + 1; r <= to.row; ++r) {
+                require(
+                    CellToColor(Cell(r, from.col)) == Color.kNothing,
+                    "Non-empty cell on pawn move"
+                );
+            }
+        } else {
+            Color to_color = CellToColor(to);
+            require(to_color != Color.kNothing && to_color != whose_move);
+        }
     }
 
     function MakeBlackPawnMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardBlackPawn(from, to));
+
+        revert("Not implemented");
     }
 
     function MakeKnightMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardKnight(from, to));
+
+        revert("Not implemented");
     }
 
     function MakeBishopMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardBishop(from, to));
+
+        revert("Not implemented");
     }
 
     function MakeRookMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardRook(from, to));
+
+        revert("Not implemented");
     }
 
     function MakeQueenMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardQueen(from, to));
+
+        revert("Not implemented");
     }
 
     function MakeKingMove(Cell memory from, Cell memory to) internal view {
         require(IsMovePossibleOnEmptyBoardKing(from, to));
+
+        revert("Not implemented");
     }
 
-    function MakeMove(Cell memory from, Cell memory to) external view {
+    function CheckIfMovePossible(
+        Cell memory from,
+        Cell memory to
+    ) internal view {
         CheckCellValidity(from);
         CheckCellValidity(to);
 
         require(CellToColor(from) == whose_move);
         require(CellToColor(to) != whose_move);
+
+        Figure figure = board[from.row][from.col];
+        if (figure == Figure.kWhitePawn) {
+            console.log("White pawn move");
+            MakeWhitePawnMove(from, to);
+            return;
+        }
+        if (figure == Figure.kBlackPawn) {
+            MakeBlackPawnMove(from, to);
+            return;
+        }
+        if (figure == Figure.kWhiteKnight || figure == Figure.kBlackKnight) {
+            MakeKnightMove(from, to);
+            return;
+        }
+        if (figure == Figure.kWhiteBishop || figure == Figure.kBlackBishop) {
+            MakeBishopMove(from, to);
+            return;
+        }
+        if (figure == Figure.kWhiteRook || figure == Figure.kBlackRook) {
+            MakeRookMove(from, to);
+            return;
+        }
+        if (figure == Figure.kWhiteQueen || figure == Figure.kBlackQueen) {
+            MakeQueenMove(from, to);
+            return;
+        }
+        if (figure == Figure.kWhiteKing || figure == Figure.kBlackKing) {
+            MakeKingMove(from, to);
+            return;
+        }
+
+        require(false, "Unexpected figure");
+    }
+
+    function MakeMove(Cell memory from, Cell memory to) external {
+        CheckIfMovePossible(from, to);
+
+        Figure figure = board[from.row][from.col];
+
+        bool is_capture = CellToColor(to) != Color.kNothing;
+        bool is_pawn_move = figure == Figure.kWhitePawn ||
+            figure == Figure.kBlackPawn;
+
+        bool is_two_cells_pawn_move = (figure == Figure.kWhitePawn &&
+            from.row == 1 &&
+            to.row == 3) ||
+            (figure == Figure.kBlackPawn && from.row == 6 && to.row == 4);
+
+        board[to.row][to.col] = board[from.row][from.col];
+        board[from.row][from.col] = Figure.kEmpty;
+
+        halfmove_clock += 1;
+
+        if (whose_move == Color.kWhite) {
+            whose_move = Color.kBlack;
+        } else {
+            whose_move = Color.kWhite;
+            fullmove_number += 1;
+        }
+
+        if (is_capture || is_pawn_move) {
+            halfmove_clock = 0;
+        }
+
+        if (is_two_cells_pawn_move) {
+            maybe_en_passant_cell.col = from.col;
+            maybe_en_passant_cell.row = (from.row + to.row) / 2;
+        } else {
+            maybe_en_passant_cell.col = 0;
+            maybe_en_passant_cell.row = 0;
+        }
     }
 }
